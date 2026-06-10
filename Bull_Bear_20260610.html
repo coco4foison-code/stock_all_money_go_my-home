@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LSTM 台股交易模型 — 今日訊號與績效總表</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    background: #f0f2f5;
+    color: #1a1a2e;
+    padding: 32px 16px;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .container { max-width: 1100px; width: 100%; }
+  h1 {
+    font-size: 24px; font-weight: 700; margin-bottom: 4px;
+    color: #143250; letter-spacing: 0.5px;
+  }
+  .subtitle {
+    font-size: 14px; color: #666; margin-bottom: 28px;
+    border-bottom: 2px solid #dce1e8; padding-bottom: 12px;
+  }
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-size: 17px; font-weight: 700; color: #143250;
+    margin-bottom: 12px; padding-left: 10px;
+    border-left: 4px solid #e74c3c; line-height: 1.4;
+  }
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    background: #fff;
+  }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 14px; white-space: nowrap;
+  }
+  thead th {
+    background: #143250; color: #fff;
+    padding: 13px 14px; text-align: center;
+    font-weight: 600; letter-spacing: 0.3px;
+  }
+  tbody td {
+    padding: 11px 14px; text-align: center;
+    border-bottom: 1px solid #eef1f5;
+  }
+  tbody tr:nth-child(even) { background: #f8fafc; }
+  tbody tr:hover { background: #e8f0fe; }
+  .tag-buy {
+    display: inline-block; background: #e74c3c; color: #fff;
+    border-radius: 4px; padding: 2px 10px;
+    font-size: 12px; font-weight: 700;
+  }
+  .tag-sell {
+    display: inline-block; background: #2c3e50; color: #fff;
+    border-radius: 4px; padding: 2px 10px;
+    font-size: 12px; font-weight: 700;
+  }
+  .prob-bar-wrap {
+    min-width: 80px; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .prob-bar {
+    width: 50px; height: 6px; background: #e0e0e0; border-radius: 3px; overflow: hidden;
+  }
+  .prob-bar-fill {
+    height: 100%; border-radius: 3px; transition: width 0.6s ease;
+  }
+  .num-positive { color: #27ae60; font-weight: 600; }
+  .num-negative { color: #e74c3c; font-weight: 600; }
+  .num-neutral  { color: #555; font-weight: 600; }
+  .footer {
+    margin-top: 12px; font-size: 12px; color: #999; text-align: right;
+  }
+  @media (max-width: 640px) {
+    body { padding: 16px 8px; }
+    table { font-size: 12px; }
+    thead th, tbody td { padding: 8px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🐂 LSTM 台股交易模型</h1>
+  <div class="subtitle">測試期間 2025-01-06 ~ 2026-08-30 ｜ 資料來源 Yahoo Finance ｜ 更新 2026-06-10</div>
+
+  <div class="section">
+    <div class="section-title">今日交易訊號總表</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>代碼</th><th>名稱</th><th>訊號</th><th>買進機率</th><th>收盤價</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>2330.TW</td><td>台積電</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:51%;background:#e74c3c"></div></div>51.0%</div></td><td>2,255.00</td></tr>
+          <tr><td>2454.TW</td><td>聯發科</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:53.5%;background:#e74c3c"></div></div>53.5%</div></td><td>4,155.00</td></tr>
+          <tr><td>2308.TW</td><td>台達電</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:52.5%;background:#e74c3c"></div></div>52.5%</div></td><td>2,200.00</td></tr>
+          <tr><td>2317.TW</td><td>鴻海</td><td><span class="tag-sell">賣出 ✕</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:49.9%;background:#2c3e50"></div></div>49.9%</div></td><td>263.00</td></tr>
+          <tr><td>3711.TW</td><td>日月光投控</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:53.5%;background:#e74c3c"></div></div>53.5%</div></td><td>539.00</td></tr>
+          <tr><td>2383.TW</td><td>台光電</td><td><span class="tag-sell">賣出 ✕</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:46.9%;background:#2c3e50"></div></div>46.9%</div></td><td>4,940.00</td></tr>
+          <tr><td>3037.TW</td><td>欣興</td><td><span class="tag-sell">賣出 ✕</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:49.9%;background:#2c3e50"></div></div>49.9%</div></td><td>884.00</td></tr>
+          <tr><td>2345.TW</td><td>智邦</td><td><span class="tag-sell">賣出 ✕</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:38%;background:#2c3e50"></div></div>38.0%</div></td><td>2,365.00</td></tr>
+          <tr><td>2881.TW</td><td>富邦金</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:53.6%;background:#e74c3c"></div></div>53.6%</div></td><td>122.50</td></tr>
+          <tr><td>2382.TW</td><td>廣達</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:53.3%;background:#e74c3c"></div></div>53.3%</div></td><td>380.50</td></tr>
+          <tr><td>2882.TW</td><td>國泰金</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:51%;background:#e74c3c"></div></div>51.0%</div></td><td>99.90</td></tr>
+          <tr><td>3017.TW</td><td>奇鋐</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:57.3%;background:#e74c3c"></div></div>57.3%</div></td><td>2,360.00</td></tr>
+          <tr><td>2412.TW</td><td>中華電</td><td><span class="tag-sell">賣出 ✕</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:46.4%;background:#2c3e50"></div></div>46.4%</div></td><td>144.00</td></tr>
+          <tr><td>2891.TW</td><td>中信金</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:55.4%;background:#e74c3c"></div></div>55.4%</div></td><td>68.20</td></tr>
+          <tr><td>2303.TW</td><td>聯電</td><td><span class="tag-sell">賣出 ✕</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:45.7%;background:#2c3e50"></div></div>45.7%</div></td><td>118.50</td></tr>
+          <tr><td>2360.TW</td><td>致茂</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:51.9%;background:#e74c3c"></div></div>51.9%</div></td><td>2,210.00</td></tr>
+          <tr><td>7769.TW</td><td>鴻華先進</td><td><span class="tag-buy">買進 ▲</span></td><td><div class="prob-bar-wrap"><div class="prob-bar"><div class="prob-bar-fill" style="width:63.5%;background:#e74c3c"></div></div>63.5%</div></td><td>6,840.00</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">測試期間績效總表</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>代碼</th><th>名稱</th><th>策略總報酬</th><th>買進持有</th><th>策略年化</th><th>持有年化</th><th>夏普值</th><th>勝率</th><th>交易天數</th></tr>
+        </thead>
+        <tbody id="perf-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    LSTM 模型交易策略 ｜ 僅供研究參考，不構成投資建議
+  </div>
+</div>
+
+<script>
+const perfData = [
+  ["2330.TW","台積電","109.0%","104.4%","71.9%","69.1%",1.85,"52.5%",297],
+  ["2454.TW","聯發科","190.8%","203.1%","119.1%","125.8%",1.82,"50.8%",295],
+  ["2308.TW","台達電","458.4%","435.0%","253.8%","242.9%",2.78,"54.1%",314],
+  ["2317.TW","鴻海","-4.5%","47.7%","-3.3%","33.2%",-0.01,"51.4%",72],
+  ["3711.TW","日月光投控","238.0%","237.0%","144.7%","144.1%",2.03,"51.8%",307],
+  ["2383.TW","台光電","267.8%","707.2%","160.4%","363.8%",2.28,"53.3%",182],
+  ["3037.TW","欣興","64.7%","490.7%","44.3%","268.7%",1.20,"55.6%",108],
+  ["2345.TW","智邦","233.9%","209.6%","142.5%","129.4%",1.89,"54.3%",258],
+  ["2881.TW","富邦金","41.3%","43.6%","28.9%","30.5%",1.10,"53.1%",307],
+  ["2382.TW","廣達","54.5%","35.6%","37.7%","25.1%",1.02,"51.5%",301],
+  ["2882.TW","國泰金","53.3%","53.1%","36.9%","36.7%",1.19,"55.7%",305],
+  ["3017.TW","奇鋐","330.5%","279.7%","192.3%","166.5%",2.19,"52.7%",317],
+  ["2412.TW","中華電","7.3%","21.1%","5.3%","15.1%",0.65,"53.5%",86],
+  ["2891.TW","中信金","78.8%","82.7%","53.3%","55.7%",1.76,"54.8%",305],
+  ["2303.TW","聯電","47.8%","190.7%","33.2%","119.0%",1.51,"52.9%",85],
+  ["2360.TW","致茂","552.2%","523.5%","296.6%","283.7%",2.65,"56.2%",315],
+  ["7769.TW","鴻華先進","604.3%","503.2%","319.6%","274.5%",2.54,"57.6%",309],
+];
+
+function cls(v) {
+  if (typeof v === 'string') v = parseFloat(v.replace('%','').replace(',',''));
+  if (v > 0) return 'num-positive';
+  if (v < 0) return 'num-negative';
+  return 'num-neutral';
+}
+
+const tbody = document.getElementById('perf-body');
+perfData.forEach(function(r) {
+  const tr = document.createElement('tr');
+  const cols = [
+    r[0], r[1],
+    { v: r[2], cls: cls(r[2]) },
+    { v: r[3], cls: cls(r[3]) },
+    { v: r[4], cls: cls(r[4]) },
+    { v: r[5], cls: cls(r[5]) },
+    { v: r[6].toFixed(2), cls: cls(r[6]) },
+    { v: r[7], cls: cls(r[7]) },
+    { v: r[8], cls: 'num-neutral' },
+  ];
+  cols.forEach(function(c) {
+    const td = document.createElement('td');
+    if (typeof c === 'string') { td.textContent = c; }
+    else { td.textContent = c.v; td.className = c.cls; }
+    tr.appendChild(td);
+  });
+  tbody.appendChild(tr);
+});
+
+const avgs = perfData.reduce(function(a, r) {
+  a.s += parseFloat(r[2]); a.b += parseFloat(r[3]); return a;
+}, { s: 0, b: 0 });
+const n = perfData.length;
+const tr = document.createElement('tr');
+tr.innerHTML = '<td colspan="2" style="font-weight:700;background:#eaf2f8;">平均</td>'
+  + '<td class="num-positive" style="background:#eaf2f8;">' + (avgs.s / n).toFixed(1) + '%</td>'
+  + '<td class="num-positive" style="background:#eaf2f8;">' + (avgs.b / n).toFixed(1) + '%</td>'
+  + '<td colspan="5" style="background:#eaf2f8;"></td>';
+tbody.appendChild(tr);
+</script>
+</body>
+</html>

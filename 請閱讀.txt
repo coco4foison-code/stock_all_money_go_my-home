@@ -1,0 +1,8 @@
+請閱讀 
+"C:\ask_ai\260604-p\HW\Bull_Bear_20260610_performance.csv"
+"C:\ask_ai\260604-p\HW\Bull_Bear_20260610_today_signals.csv"
+
+請幫我設計一個靜態一頁網頁回答，
+使用 HTML/CSS/javascript.
+存檔至 "C:\ask_ai\260604-p\HW\"
+
